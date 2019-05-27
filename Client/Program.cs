@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using CommandLine;
+using System.Text.RegularExpressions;
 
 namespace Client
 {
@@ -10,7 +11,7 @@ namespace Client
     {
         public class Options
         {
-            [Option('a', "audio", Required = true, HelpText = "Audio file to be processed")]
+            [Option('a', "audio", Required = true, HelpText = "Audio file or youtube, facebook, twitter, dailymotion video link to be processed")]
             public string AudioFile { get; set; }
 
             [Option('o', "output", Required = false, HelpText = "Output filename (will print to terminal if not specified)")]
@@ -49,8 +50,20 @@ namespace Client
                 Console.WriteLine("Exception thrown while parsing arguments: " + ex.Message);
                 return;
             }
+
+            Regex rx = new Regex(@"\b(https?://)?(www\.)?(youtube|youtu|youtube-nocookie|facebook|dailymotion|twitter)\.(com|be)\b",
+                    RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
             Transcriber transcriber = new Transcriber(userId, token, lang);
-            Task<string> resultTask = transcriber.Transcribe(audioFile);
+            Task<string> resultTask = null;
+            if(rx.Matches(audioFile).Count > 0)
+            {
+                resultTask = transcriber.TranscribeVideoLink(audioFile);
+            }
+            else
+            {
+                resultTask = transcriber.Transcribe(audioFile);
+            }
             if (resultTask == null)
             {
                 Console.WriteLine("Transcibing process failed.");
